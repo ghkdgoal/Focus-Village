@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>포커스 빌리지</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>포커스 빌리지</h1>
+    <p class="lead">당신의 집중 습관을 기록하고, 서로의 팁을 공유하는 공간</p>
+  </header>
+
+    <nav class="category-tabs">
+    <button class="cat-btn active" data-cat="myRoutine">나의 루틴</button>
+    <button class="cat-btn" data-cat="othersRoutine">다른 사람들은 어떻게 살고 있을까?</button>
+    <button class="cat-btn" data-cat="community">커뮤니티</button>
+  </nav>
+
+  <main>
+        <section class="panel" id="myRoutinePanel">
+      <h2>나의 루틴 작성</h2>
+      <form id="myRoutineForm">
+                <div class="q">
+          <label class="q-title">1) 평소에 집중을 잘 하는 편인가요?</label>
+          <div class="options">
+            <label><input type="radio" name="q1" value="매우 그렇다" required> 매우 그렇다</label>
+            <label><input type="radio" name="q1" value="그렇다"> 그렇다</label>
+            <label><input type="radio" name="q1" value="보통"> 보통</label>
+            <label><input type="radio" name="q1" value="그렇지 않다"> 그렇지 않다</label>
+            <label><input type="radio" name="q1" value="전혀 아니다"> 전혀 아니다</label>
+          </div>
+        </div>
+
+                <div class="q">
+          <label class="q-title">2) 집중을 하기 이전/이후 루틴이 있나요?</label>
+          <textarea name="q2" placeholder="예: 스트레칭 → 25분 집중 → 휴식"></textarea>
+        </div>
+        <div class="q">
+          <label class="q-title">3) 최대 집중 시간은 어느 정도인가요? (분 단위)</label>
+          <input type="number" name="q3" min="1" placeholder="예: 25">
+        </div>
+        <div class="q">
+          <label class="q-title">4) 집중하기 위한 나만의 방법이 있을까요?</label>
+          <textarea name="q4" placeholder="자신만의 집중 팁"></textarea>
+        </div>
+        <div class="q">
+          <label class="q-title">5) 집중이 안 되는 이유는 무엇이라고 생각하시나요?</label>
+          <textarea name="q5" placeholder="자유롭게 적어주세요."></textarea>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn primary">제출</button>
+          <button type="button" class="btn ghost" id="resetMyRoutine">초기화</button>
+        </div>
+      </form>
+    </section>
+
+        <section class="panel" id="othersRoutinePanel">
+      <h2>다른 사람들은 어떻게 살고 있을까?</h2>
+            <div id="routineStats" class="panel stats-panel">
+        <h3>📊 루틴 통계</h3>
+        <div id="statsContent" class="small">
+          <p>루틴 데이터가 충분치 않습니다.</p>
+        </div>
+      </div>
+      <div id="othersRoutineBoard">
+        <div class="small">아직 다른 사람들의 루틴이 없습니다.</div>
+      </div>
+    </section>
+
+        <section class="panel" id="communityPanel">
+      <h2>커뮤니티</h2>
+      <div id="postitForm">
+        <input type="text" id="postNick" placeholder="닉네임 (선택)">
+        <label><input type="checkbox" id="postAnonymous"> 익명으로 작성</label>
+        <textarea id="postText" placeholder="글을 작성하세요"></textarea>
+        <div class="actions">
+          <button class="btn primary" id="postAddBtn">글 올리기</button>
+        </div>
+      </div>
+      <div id="postBoard">
+        <div class="small">아직 글이 없습니다.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="foot-note">※ 데모 버전. Google Sheets 연동 가능</div>
+  </footer>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
