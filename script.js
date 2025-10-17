@@ -307,3 +307,4 @@ function renderPostits() {
         });
     });
 }
+// 👈 여기에 불필요한 닫는 괄호가 없습니다.

@@ -3,6 +3,7 @@
   --accent:#34D399; --card:#fff; --radius:12px; --gap:14px;
   font-family: Inter, Pretendard, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
+
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);padding:24px}
 .wrap{max-width:1000px;margin:0 auto}
@@ -19,7 +20,6 @@ main{display:grid;grid-template-columns:1fr;gap:20px;margin-top:10px}
 .options label{display:inline-block;margin-right:8px;font-size:14px}
 textarea,input[type="text"],input[type="number"],input[type="password"]{
   width:100%;padding:10px;border-radius:10px;border:1px solid #e6e9ee;margin-bottom:6px;
-  /* 통계 패널의 input 겹치지 않도록 */
   box-sizing: border-box; 
 }
 .actions{display:flex;gap:8px;margin-top:8px}
@@ -36,7 +36,7 @@ textarea,input[type="text"],input[type="number"],input[type="password"]{
     border: 1px solid rgba(0,0,0,0.08); /* 테두리 강화 */
     box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* 그림자 추가 */
     cursor: pointer;
-    transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out; /* 호버 효과 */
+    transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out; 
 }
 .postit:hover {
     transform: translateY(-2px);
@@ -55,7 +55,7 @@ textarea,input[type="text"],input[type="number"],input[type="password"]{
 /* 댓글 폼 레이아웃 개선 */
 .comment-form {
     display: flex;
-    flex-wrap: wrap; /* 작은 화면에서 줄바꿈 */
+    flex-wrap: wrap; 
     gap: 8px;
     align-items: center;
     margin-top: 10px;
@@ -63,8 +63,8 @@ textarea,input[type="text"],input[type="number"],input[type="password"]{
     border-top: 1px dashed #f1f5f9;
 }
 .comment-form input[type="text"], .comment-form input[type="password"] {
-    flex: 1 1 auto; /* 자동으로 공간을 채우고 필요시 줄바꿈 */
-    min-width: 100px; /* 너무 작아지지 않도록 */
+    flex: 1 1 auto; 
+    min-width: 100px; 
     margin-bottom: 0;
     padding: 6px;
     font-size: 13px;
@@ -77,8 +77,8 @@ textarea,input[type="text"],input[type="number"],input[type="password"]{
     gap: 4px;
 }
 .comment-form label input[type="checkbox"] {
-    margin-bottom: 0; /* 체크박스 마진 제거 */
-    width: auto; /* 체크박스 너비 자동 */
+    margin-bottom: 0; 
+    width: auto; 
 }
 .comment-form button {
     padding: 6px 10px;
@@ -109,3 +109,4 @@ textarea,input[type="text"],input[type="number"],input[type="password"]{
 .stats-panel p {
     margin-bottom: 5px;
 }
+/* 👈 여기에 불필요한 닫는 괄호가 없습니다. */
