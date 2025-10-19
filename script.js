@@ -1,5 +1,5 @@
-// ✅ Focus Village 완성본 (Google Sheets + 관리자 키 + 공유 데이터)
-const API_URL = "https://script.google.com/macros/s/AKfycby3S-JkUw8HQNDA_Apka09DSXl3wp_GhxbpkBG546zjEiy8kuVkrjctTzvSU-z553AV/exec";
+// ✅ Focus Village 완성본 (Cloudflare Worker 프록시 + Google Sheets)
+const API_URL = "https://cold-cherry-724.ini123567.workers.dev"; // ⚡ Worker URL 적용
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -18,7 +18,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   renderPostits();
 });
 
-// ✅ 데이터 불러오기 (Google Sheets)
+// ✅ 데이터 불러오기 (Cloudflare Worker 통해 Google Sheets)
 async function loadAllData() {
   try {
     const res = await fetch(API_URL);
@@ -30,7 +30,7 @@ async function loadAllData() {
   }
 }
 
-// ✅ 데이터 저장 (Google Sheets)
+// ✅ 데이터 저장 (Cloudflare Worker 통해 Google Sheets)
 async function saveData(category, nickname, text, comments = [], report = 0) {
   try {
     await fetch(API_URL, {
@@ -201,4 +201,3 @@ function addAdminControls(div, p) {
     });
   }
 }
-
