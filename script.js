@@ -1,5 +1,5 @@
 // ✅ Focus Village 완성본 (Google Sheets + 관리자 키 + 공유 데이터)
-const API_URL = "https://script.google.com/macros/s/AKfycbz27X4ZX3tpF8xN2oisYIX-0pmDXK-0V--Pf0d86sFm3zt_JiZPF8RA_9cdZhrZSb6f/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby3S-JkUw8HQNDA_Apka09DSXl3wp_GhxbpkBG546zjEiy8kuVkrjctTzvSU-z553AV/exec";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -9,7 +9,7 @@ let routines = [];
 let postits = [];
 
 // ✅ 관리자 키 입력
-const masterKey = prompt("관리자라면 마스터키를 입력하세요 (일반 사용자는 Enter)");
+const masterKey = prompt("환영합니다! 이 공간은 집중 시간을 기록하기 위한 공간입니다. (Enter 혹은 확인을 눌러주세요.)");
 
 // ✅ 초기 로드
 window.addEventListener("DOMContentLoaded", async () => {
@@ -201,3 +201,4 @@ function addAdminControls(div, p) {
     });
   }
 }
+
