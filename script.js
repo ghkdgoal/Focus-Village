@@ -1,5 +1,5 @@
 // ✅ Focus Village 완성본 (Cloudflare Worker 프록시 + Google Sheets)
-const API_URL = "https://cold-cherry-724.ini123567.workers.dev"; // ⚡ Worker URL 적용
+const API_URL = "https://script.google.com/macros/s/AKfycbx7cAH8-zfwSsVfIkLXS2RlXry-bvk0xUbfj3XgsIP_zHOgWwOFJacyMHAIZZmf4gbY/exec"; // ⚡ Worker URL 적용
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -201,3 +201,4 @@ function addAdminControls(div, p) {
     });
   }
 }
+
