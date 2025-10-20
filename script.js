@@ -1,5 +1,5 @@
 // ✅ Focus Village 완성본 (Cloudflare Worker 프록시 + Google Sheets)
-const API_URL = "https://script.google.com/macros/s/AKfycbyhEs7S05LtguqbOwUrAeaSP_Oy3lY4BpCYxa-6aEF3LvM4QSvxs-pWxB1VpGO5WVsK/exec"; // ⚡ Worker URL 적용
+const API_URL = "https://withered-poetry-718c.ini123567.workers.dev"; // ⚡ Worker URL 적용
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -201,5 +201,6 @@ function addAdminControls(div, p) {
     });
   }
 }
+
 
 
