@@ -8,7 +8,7 @@ let routines = [];
 let postits = [];
 
 // ✅ 관리자 키 (선택 입력)
-const masterKey = prompt("환영합니다! 이 공간은 집중 루틴을 기록하기 위한 공간입니다. (Enter 혹은 확인을 눌러주세요.)");
+const masterKey = prompt("환영합니다! 집중 루틴 커뮤니티에 오신 걸 환영합니다. (Enter 혹은 확인을 눌러주세요.)");
 
 // ✅ 초기 실행
 window.addEventListener("DOMContentLoaded", async () => {
@@ -111,7 +111,7 @@ $('#postAddBtn').addEventListener('click', async () => {
   renderPostits();
 });
 
-// ✅ 커뮤니티 렌더링 (중복 렌더 방지 + 이벤트 중복 방지)
+// ✅ 커뮤니티 렌더링
 function renderPostits() {
   const oldBoard = $('#postBoard');
   const newBoard = oldBoard.cloneNode(false);
@@ -123,7 +123,7 @@ function renderPostits() {
     return;
   }
 
-  postits.forEach(p => {
+  postits.forEach((p, idx) => {
     const div = document.createElement('div');
     div.className = 'postit';
     div.innerHTML = `
@@ -144,14 +144,45 @@ function renderPostits() {
     // 댓글 렌더링
     const commentList = div.querySelector('.comment-list');
     const comments = JSON.parse(p.comments || "[]");
-    comments.forEach(c => {
+    comments.forEach((c, i) => {
       const cdiv = document.createElement('div');
       cdiv.className = 'comment';
-      cdiv.innerHTML = `<span>${c.nick}: ${c.text}</span>`;
+      cdiv.innerHTML = `
+        <span>${c.nick}: ${c.text}</span>
+        <div>
+          <button class="reply-btn">↩</button>
+          <button class="c-del">❌</button>
+        </div>
+      `;
       commentList.appendChild(cdiv);
+
+      // ✅ 댓글 삭제
+      cdiv.querySelector('.c-del').addEventListener('click', async () => {
+        if (!confirm('이 댓글을 삭제하시겠습니까?')) return;
+        comments.splice(i, 1);
+        await saveData("postit", p.nickname, p.text, comments, p.report || 0);
+        setTimeout(async () => {
+          await loadAllData();
+          renderPostits();
+        }, 100);
+      });
+
+      // ✅ 대댓글
+      cdiv.querySelector('.reply-btn').addEventListener('click', async () => {
+        const replyText = prompt('답글을 입력하세요:');
+        if (!replyText) return;
+        const nick = $('#postNick').value.trim() || '익명';
+        const reply = { nick, text: `↳ ${replyText}` };
+        comments.splice(i + 1, 0, reply);
+        await saveData("postit", p.nickname, p.text, comments, p.report || 0);
+        setTimeout(async () => {
+          await loadAllData();
+          renderPostits();
+        }, 100);
+      });
     });
 
-    // 댓글 작성 (중복 방지 수정됨)
+    // 댓글 작성
     div.querySelector('.comment-add').addEventListener('click', async () => {
       const val = div.querySelector('.comment-input').value.trim();
       if (!val) return;
