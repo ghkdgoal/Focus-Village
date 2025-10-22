@@ -182,7 +182,9 @@ function createPostitElement(p) {
   `;
 
   const commentList = div.querySelector('.comment-list');
-  const comments = JSON.parse(p.comments || "[]");
+  // 🔹 댓글이 배열인지 문자열인지 확인 후 파싱
+  const comments = Array.isArray(p.comments) ? p.comments : JSON.parse(p.comments || "[]");
+  p.comments = comments; // ⚡ 포스트 객체 자체 업데이트
   renderComments(commentList, comments, p);
 
   // 댓글 작성
@@ -192,9 +194,9 @@ function createPostitElement(p) {
     const anon = div.querySelector('.comment-anonymous').checked;
     const nick = anon ? '익명' : ($('#postNick').value.trim() || '익명');
     comments.push({ nick, text: val });
+    p.comments = comments; // ⚡ 포스트 객체 업데이트
 
-    await updatePostit(p, comments); // ⚡ 댓글만 업데이트
-
+    await updatePostit(p, comments);
     renderComments(commentList, comments, p, true);
     div.querySelector('.comment-input').value = '';
   });
@@ -202,7 +204,7 @@ function createPostitElement(p) {
   // 신고
   div.querySelector('.report').addEventListener('click', async () => {
     const newReport = (parseInt(p.report || 0) + 1);
-    await updatePostit(p, comments, newReport); // ⚡ 신고만 업데이트
+    await updatePostit(p, comments, newReport);
     p.report = newReport;
     div.querySelector('.report').textContent = `🚨${newReport}`;
   });
@@ -231,6 +233,7 @@ function renderComments(list, comments, p, smooth = false) {
 
     cdiv.querySelector('.c-del').addEventListener('click', async () => {
       comments.splice(i, 1);
+      p.comments = comments; // ⚡ 객체 업데이트
       await updatePostit(p, comments);
       renderComments(list, comments, p, true);
     });
@@ -240,6 +243,7 @@ function renderComments(list, comments, p, smooth = false) {
       if (!replyText) return;
       const nick = $('#postNick').value.trim() || '익명';
       comments.splice(i + 1, 0, { nick, text: `↳ ${replyText}` });
+      p.comments = comments; // ⚡ 객체 업데이트
       await updatePostit(p, comments);
       renderComments(list, comments, p, true);
     });
