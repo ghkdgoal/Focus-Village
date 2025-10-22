@@ -9,14 +9,16 @@ let postits = [];
 
 const masterKey = prompt("환영합니다! 집중 루틴 커뮤니티에 오신 걸 환영합니다. (Enter 혹은 확인을 눌러주세요.)");
 
-// ✅ 초기 실행
+// DOMContentLoaded 이후 실행
 window.addEventListener("DOMContentLoaded", async () => {
   await loadAllData();
   renderOthersRoutine();
   renderPostits();
+  setupTabs();
+  setupFormButtons();
 });
 
-// ✅ 데이터 불러오기
+// === 데이터 불러오기 ===
 async function loadAllData() {
   try {
     const res = await fetch(API_URL);
@@ -28,7 +30,7 @@ async function loadAllData() {
   }
 }
 
-// ✅ 데이터 저장
+// === 데이터 저장 ===
 async function saveData(category, nickname, text, comments = [], report = 0) {
   try {
     await fetch(API_URL, {
@@ -41,42 +43,69 @@ async function saveData(category, nickname, text, comments = [], report = 0) {
   }
 }
 
-// ✅ 탭 전환
-$$('.cat-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const cat = btn.dataset.cat;
-    $$('.cat-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    $('#myRoutinePanel').style.display = cat === 'myRoutine' ? 'block' : 'none';
-    $('#othersRoutinePanel').style.display = cat === 'othersRoutine' ? 'block' : 'none';
-    $('#communityPanel').style.display = cat === 'community' ? 'block' : 'none';
+// === 탭 전환 ===
+function setupTabs() {
+  $$('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.cat;
+      $$('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const myPanel = $('#myRoutinePanel');
+      const othersPanel = $('#othersRoutinePanel');
+      const communityPanel = $('#communityPanel');
+
+      if (myPanel) myPanel.style.display = cat === 'myRoutine' ? 'block' : 'none';
+      if (othersPanel) othersPanel.style.display = cat === 'othersRoutine' ? 'block' : 'none';
+      if (communityPanel) communityPanel.style.display = cat === 'community' ? 'block' : 'none';
+    });
   });
-});
+}
 
-// ✅ 루틴 제출
-$('#myRoutineForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const data = {
-    q1: e.target.q1.value,
-    q2: e.target.q2.value,
-    q3: e.target.q3.value,
-    q4: e.target.q4.value,
-    q5: e.target.q5.value,
-  };
-  const text = JSON.stringify(data, null, 2);
-  await saveData("routine", "익명", text);
-  alert('루틴이 제출되었습니다!');
-  e.target.reset();
-  await loadAllData();
-  renderOthersRoutine();
-});
+// === 폼 버튼 이벤트 ===
+function setupFormButtons() {
+  const myForm = $('#myRoutineForm');
+  if (myForm) {
+    myForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        q1: e.target.q1.value,
+        q2: e.target.q2.value,
+        q3: e.target.q3.value,
+        q4: e.target.q4.value,
+        q5: e.target.q5.value,
+      };
+      await saveData("routine", "익명", JSON.stringify(data, null, 2));
+      alert('루틴이 제출되었습니다!');
+      e.target.reset();
+      await loadAllData();
+      renderOthersRoutine();
+    });
+  }
 
-// ✅ 루틴 초기화
-$('#resetMyRoutine').addEventListener('click', () => $('#myRoutineForm').reset());
+  const resetBtn = $('#resetMyRoutine');
+  if (resetBtn) resetBtn.addEventListener('click', () => {
+    if (myForm) myForm.reset();
+  });
 
-// ✅ 루틴 렌더링
+  const postBtn = $('#postAddBtn');
+  if (postBtn) {
+    postBtn.addEventListener('click', async () => {
+      const text = $('#postText').value.trim();
+      if (!text) return alert('내용을 입력해주세요.');
+      const nick = $('#postAnonymous').checked ? '익명' : ($('#postNick').value.trim() || '익명');
+      await saveData("postit", nick, text, []);
+      $('#postText').value = '';
+      await loadAllData();
+      renderPostits();
+    });
+  }
+}
+
+// === 다른 사람들의 루틴 렌더링 ===
 function renderOthersRoutine() {
   const board = $('#othersRoutineBoard');
+  if (!board) return;
   board.innerHTML = '';
   if (!routines.length) {
     board.innerHTML = '<div class="small">아직 다른 사람들의 루틴이 없습니다.</div>';
@@ -93,26 +122,16 @@ function renderOthersRoutine() {
       <div>Q3: ${parsed.q3 || ''}</div>
       <div>Q4: ${parsed.q4 || ''}</div>
       <div>Q5: ${parsed.q5 || ''}</div>
-      <div class="meta small">${r.timestamp}</div>
+      <div class="meta small">${r.timestamp || ''}</div>
     `;
     board.appendChild(div);
   });
 }
 
-// ✅ 글 작성
-$('#postAddBtn').addEventListener('click', async () => {
-  const text = $('#postText').value.trim();
-  if (!text) return alert('내용을 입력해주세요.');
-  const nick = $('#postAnonymous').checked ? '익명' : ($('#postNick').value.trim() || '익명');
-  await saveData("postit", nick, text, []);
-  $('#postText').value = '';
-  await loadAllData();
-  renderPostits();
-});
-
-// ✅ 커뮤니티 전체 렌더링
+// === 커뮤니티 렌더링 ===
 function renderPostits() {
   const board = $('#postBoard');
+  if (!board) return;
   board.replaceChildren();
 
   if (!postits.length) {
@@ -121,14 +140,14 @@ function renderPostits() {
   }
 
   postits.forEach((p, idx) => {
-    const div = createPostitElement(p, idx);
+    const div = createPostitElement(p);
     board.appendChild(div);
     requestAnimationFrame(() => div.classList.add('fade-in'));
   });
 }
 
-// ✅ 게시글 생성 (독립 렌더링)
-function createPostitElement(p, idx) {
+// === 게시글 생성 ===
+function createPostitElement(p) {
   const div = document.createElement('div');
   div.className = 'postit';
   div.innerHTML = `
@@ -153,10 +172,9 @@ function createPostitElement(p, idx) {
     if (!val) return;
     const anon = div.querySelector('.comment-anonymous').checked;
     const nick = anon ? '익명' : ($('#postNick').value.trim() || '익명');
-    const newComment = { nick, text: val };
-    comments.push(newComment);
+    comments.push({ nick, text: val });
     await saveData("postit", p.nickname, p.text, comments, p.report || 0);
-    renderComments(commentList, comments, p, true); // 🔥 국소 업데이트
+    renderComments(commentList, comments, p, true);
     div.querySelector('.comment-input').value = '';
   });
 
@@ -174,7 +192,7 @@ function createPostitElement(p, idx) {
   return div;
 }
 
-// ✅ 댓글 렌더링 (국소적)
+// === 댓글 렌더링 ===
 function renderComments(list, comments, p, smooth = false) {
   list.replaceChildren();
   comments.forEach((c, i) => {
@@ -190,50 +208,26 @@ function renderComments(list, comments, p, smooth = false) {
     if (smooth) requestAnimationFrame(() => cdiv.classList.add('fade-in'));
     list.appendChild(cdiv);
 
-    // 댓글 삭제
     cdiv.querySelector('.c-del').addEventListener('click', async () => {
       comments.splice(i, 1);
       await saveData("postit", p.nickname, p.text, comments, p.report || 0);
       renderComments(list, comments, p, true);
     });
 
-    // 대댓글
     cdiv.querySelector('.reply-btn').addEventListener('click', async () => {
       const replyText = prompt('답글을 입력하세요:');
       if (!replyText) return;
       const nick = $('#postNick').value.trim() || '익명';
-      const reply = { nick, text: `↳ ${replyText}` };
-      comments.splice(i + 1, 0, reply);
+      comments.splice(i + 1, 0, { nick, text: `↳ ${replyText}` });
       await saveData("postit", p.nickname, p.text, comments, p.report || 0);
-      renderComments(list, comments, p, true); // 🔥 부분 업데이트
+      renderComments(list, comments, p, true);
     });
   });
 }
 
-// ✅ 관리자 삭제
+// === 관리자 삭제 ===
 function addAdminControls(div, p) {
   if (masterKey && masterKey.length > 0) {
     const adminPanel = document.createElement('div');
-    adminPanel.innerHTML = `<button class="admin-del">관리자 삭제</button>`;
-    adminPanel.style.marginTop = "6px";
-    div.appendChild(adminPanel);
+    adminPanel.innerHTML = `<button class="admin-del
 
-    adminPanel.querySelector(".admin-del").addEventListener("click", async () => {
-      const confirmDel = confirm(`"${p.text}" 글을 정말 삭제할까요?`);
-      if (!confirmDel) return;
-      await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "delete",
-          masterKey: masterKey,
-          nickname: p.nickname,
-          text: p.text
-        })
-      });
-      alert("삭제 완료!");
-      await loadAllData();
-      renderPostits();
-    });
-  }
-}
