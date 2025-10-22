@@ -3,22 +3,21 @@ const API_URL = "https://withered-poetry-718c.ini123567.workers.dev"; // ⚡ Wor
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
-function uid(len = 6) { return Math.random().toString(36).slice(2, 2 + len); }
 
 let routines = [];
 let postits = [];
 
-// ✅ 관리자 키 입력
-const masterKey = prompt("환영합니다! 이 공간은 집중 시간을 기록하기 위한 공간입니다. (Enter 혹은 확인을 눌러주세요.)");
+// ✅ 관리자 키 (선택 입력)
+const masterKey = prompt("환영합니다! 이 공간은 집중 루틴을 기록하기 위한 공간입니다. (Enter 혹은 확인을 눌러주세요.)");
 
-// ✅ 초기 로드
+// ✅ 초기 실행
 window.addEventListener("DOMContentLoaded", async () => {
   await loadAllData();
   renderOthersRoutine();
   renderPostits();
 });
 
-// ✅ 데이터 불러오기 (Cloudflare Worker 통해 Google Sheets)
+// ✅ 데이터 불러오기
 async function loadAllData() {
   try {
     const res = await fetch(API_URL);
@@ -30,7 +29,7 @@ async function loadAllData() {
   }
 }
 
-// ✅ 데이터 저장 (Cloudflare Worker 통해 Google Sheets)
+// ✅ 데이터 저장
 async function saveData(category, nickname, text, comments = [], report = 0) {
   try {
     await fetch(API_URL, {
@@ -43,7 +42,7 @@ async function saveData(category, nickname, text, comments = [], report = 0) {
   }
 }
 
-// ✅ 카테고리 탭 전환
+// ✅ 카테고리 탭
 $$('.cat-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const cat = btn.dataset.cat;
@@ -112,10 +111,13 @@ $('#postAddBtn').addEventListener('click', async () => {
   renderPostits();
 });
 
-// ✅ 커뮤니티 렌더링
+// ✅ 커뮤니티 렌더링 (중복 렌더 방지 + 이벤트 중복 방지)
 function renderPostits() {
+  const oldBoard = $('#postBoard');
+  const newBoard = oldBoard.cloneNode(false);
+  oldBoard.parentNode.replaceChild(newBoard, oldBoard);
   const board = $('#postBoard');
-  board.innerHTML = '';
+
   if (!postits.length) {
     board.innerHTML = '<div class="small">아직 글이 없습니다.</div>';
     return;
@@ -149,7 +151,7 @@ function renderPostits() {
       commentList.appendChild(cdiv);
     });
 
-    // 댓글 작성
+    // 댓글 작성 (중복 방지 수정됨)
     div.querySelector('.comment-add').addEventListener('click', async () => {
       const val = div.querySelector('.comment-input').value.trim();
       if (!val) return;
@@ -157,24 +159,28 @@ function renderPostits() {
       const nick = anon ? '익명' : ($('#postNick').value.trim() || '익명');
       comments.push({ nick, text: val });
       await saveData("postit", p.nickname, p.text, comments, p.report || 0);
-      await loadAllData();
-      renderPostits();
+      setTimeout(async () => {
+        await loadAllData();
+        renderPostits();
+      }, 100);
     });
 
     // 신고 버튼
     div.querySelector('.report').addEventListener('click', async () => {
       const newReport = (parseInt(p.report || 0) + 1);
       await saveData("postit", p.nickname, p.text, comments, newReport);
-      await loadAllData();
-      renderPostits();
+      setTimeout(async () => {
+        await loadAllData();
+        renderPostits();
+      }, 100);
     });
 
-    // ✅ 관리자용 삭제 버튼 추가
+    // 관리자 삭제 버튼
     addAdminControls(div, p);
   });
 }
 
-// ✅ 관리자 제어 (삭제)
+// ✅ 관리자 삭제 기능
 function addAdminControls(div, p) {
   if (masterKey && masterKey.length > 0) {
     const adminPanel = document.createElement('div');
@@ -201,6 +207,3 @@ function addAdminControls(div, p) {
     });
   }
 }
-
-
-
