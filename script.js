@@ -139,7 +139,7 @@ function renderPostits() {
     return;
   }
 
-  postits.forEach((p, idx) => {
+  postits.forEach((p) => {
     const div = createPostitElement(p);
     board.appendChild(div);
     requestAnimationFrame(() => div.classList.add('fade-in'));
@@ -229,5 +229,26 @@ function renderComments(list, comments, p, smooth = false) {
 function addAdminControls(div, p) {
   if (masterKey && masterKey.length > 0) {
     const adminPanel = document.createElement('div');
-    adminPanel.innerHTML = `<button class="admin-del
+    adminPanel.innerHTML = `<button class="admin-del">관리자 삭제</button>`;
+    adminPanel.style.marginTop = "6px";
+    div.appendChild(adminPanel);
 
+    adminPanel.querySelector(".admin-del").addEventListener("click", async () => {
+      const confirmDel = confirm(`"${p.text}" 글을 정말 삭제할까요?`);
+      if (!confirmDel) return;
+      await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete",
+          masterKey: masterKey,
+          nickname: p.nickname,
+          text: p.text
+        })
+      });
+      alert("삭제 완료!");
+      await loadAllData();
+      renderPostits();
+    });
+  }
+}
