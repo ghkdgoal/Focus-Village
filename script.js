@@ -9,7 +9,7 @@ let postits = [];
 
 const masterKey = prompt("환영합니다! 집중 루틴 커뮤니티에 오신 걸 환영합니다. (Enter 혹은 확인을 눌러주세요.)");
 
-// DOMContentLoaded 이후 실행
+// 초기 실행
 window.addEventListener("DOMContentLoaded", async () => {
   await loadAllData();
   renderOthersRoutine();
@@ -30,7 +30,7 @@ async function loadAllData() {
   }
 }
 
-// === 데이터 저장 ===
+// === 새 글 저장 ===
 async function saveData(category, nickname, text, comments = [], report = 0) {
   try {
     await fetch(API_URL, {
@@ -40,6 +40,25 @@ async function saveData(category, nickname, text, comments = [], report = 0) {
     });
   } catch (e) {
     console.error("데이터 저장 오류:", e);
+  }
+}
+
+// === 기존 글 댓글만 업데이트 ===
+async function updatePostit(p, comments, newReport = null) {
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "update",
+        nickname: p.nickname,
+        text: p.text,
+        comments: comments,
+        report: newReport !== null ? newReport : p.report || 0
+      })
+    });
+  } catch (e) {
+    console.error("댓글 업데이트 오류:", e);
   }
 }
 
@@ -102,7 +121,7 @@ function setupFormButtons() {
   }
 }
 
-// === 다른 사람들의 루틴 렌더링 ===
+// === 루틴 렌더링 ===
 function renderOthersRoutine() {
   const board = $('#othersRoutineBoard');
   if (!board) return;
@@ -173,7 +192,9 @@ function createPostitElement(p) {
     const anon = div.querySelector('.comment-anonymous').checked;
     const nick = anon ? '익명' : ($('#postNick').value.trim() || '익명');
     comments.push({ nick, text: val });
-    await saveData("postit", p.nickname, p.text, comments, p.report || 0);
+
+    await updatePostit(p, comments); // ⚡ 댓글만 업데이트
+
     renderComments(commentList, comments, p, true);
     div.querySelector('.comment-input').value = '';
   });
@@ -181,7 +202,7 @@ function createPostitElement(p) {
   // 신고
   div.querySelector('.report').addEventListener('click', async () => {
     const newReport = (parseInt(p.report || 0) + 1);
-    await saveData("postit", p.nickname, p.text, comments, newReport);
+    await updatePostit(p, comments, newReport); // ⚡ 신고만 업데이트
     p.report = newReport;
     div.querySelector('.report').textContent = `🚨${newReport}`;
   });
@@ -210,7 +231,7 @@ function renderComments(list, comments, p, smooth = false) {
 
     cdiv.querySelector('.c-del').addEventListener('click', async () => {
       comments.splice(i, 1);
-      await saveData("postit", p.nickname, p.text, comments, p.report || 0);
+      await updatePostit(p, comments);
       renderComments(list, comments, p, true);
     });
 
@@ -219,7 +240,7 @@ function renderComments(list, comments, p, smooth = false) {
       if (!replyText) return;
       const nick = $('#postNick').value.trim() || '익명';
       comments.splice(i + 1, 0, { nick, text: `↳ ${replyText}` });
-      await saveData("postit", p.nickname, p.text, comments, p.report || 0);
+      await updatePostit(p, comments);
       renderComments(list, comments, p, true);
     });
   });
