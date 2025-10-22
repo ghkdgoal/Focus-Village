@@ -7,7 +7,6 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
 let routines = [];
 let postits = [];
 
-// ✅ 관리자 키 (선택 입력)
 const masterKey = prompt("환영합니다! 집중 루틴 커뮤니티에 오신 걸 환영합니다. (Enter 혹은 확인을 눌러주세요.)");
 
 // ✅ 초기 실행
@@ -42,7 +41,7 @@ async function saveData(category, nickname, text, comments = [], report = 0) {
   }
 }
 
-// ✅ 카테고리 탭
+// ✅ 탭 전환
 $$('.cat-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const cat = btn.dataset.cat;
@@ -54,7 +53,7 @@ $$('.cat-btn').forEach(btn => {
   });
 });
 
-// ✅ 나의 루틴 제출
+// ✅ 루틴 제출
 $('#myRoutineForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const data = {
@@ -75,7 +74,7 @@ $('#myRoutineForm').addEventListener('submit', async (e) => {
 // ✅ 루틴 초기화
 $('#resetMyRoutine').addEventListener('click', () => $('#myRoutineForm').reset());
 
-// ✅ 다른 사람들의 루틴 렌더링
+// ✅ 루틴 렌더링
 function renderOthersRoutine() {
   const board = $('#othersRoutineBoard');
   board.innerHTML = '';
@@ -87,7 +86,7 @@ function renderOthersRoutine() {
     let parsed = {};
     try { parsed = JSON.parse(r.text); } catch { parsed = {}; }
     const div = document.createElement('div');
-    div.className = 'postit';
+    div.className = 'postit fade-in';
     div.innerHTML = `
       <div>Q1: ${parsed.q1 || ''}</div>
       <div>Q2: ${parsed.q2 || ''}</div>
@@ -100,7 +99,7 @@ function renderOthersRoutine() {
   });
 }
 
-// ✅ 커뮤니티 글 추가
+// ✅ 글 작성
 $('#postAddBtn').addEventListener('click', async () => {
   const text = $('#postText').value.trim();
   if (!text) return alert('내용을 입력해주세요.');
@@ -111,12 +110,10 @@ $('#postAddBtn').addEventListener('click', async () => {
   renderPostits();
 });
 
-// ✅ 커뮤니티 렌더링
+// ✅ 커뮤니티 전체 렌더링
 function renderPostits() {
-  const oldBoard = $('#postBoard');
-  const newBoard = oldBoard.cloneNode(false);
-  oldBoard.parentNode.replaceChild(newBoard, oldBoard);
   const board = $('#postBoard');
+  board.replaceChildren();
 
   if (!postits.length) {
     board.innerHTML = '<div class="small">아직 글이 없습니다.</div>';
@@ -124,94 +121,96 @@ function renderPostits() {
   }
 
   postits.forEach((p, idx) => {
-    const div = document.createElement('div');
-    div.className = 'postit';
-    div.innerHTML = `
-      <div>${p.text}</div>
-      <div class="meta">
-        <span>${p.nickname}</span>
-        <span>
-          <button class="report">🚨${p.report || 0}</button>
-        </span>
-      </div>
-      <div class="comment-list"></div>
-      <input type="text" class="comment-input" placeholder="댓글 작성 (익명 가능)">
-      <label><input type="checkbox" class="comment-anonymous"> 익명</label>
-      <button class="comment-add">작성</button>
-    `;
+    const div = createPostitElement(p, idx);
     board.appendChild(div);
-
-    // 댓글 렌더링
-    const commentList = div.querySelector('.comment-list');
-    const comments = JSON.parse(p.comments || "[]");
-    comments.forEach((c, i) => {
-      const cdiv = document.createElement('div');
-      cdiv.className = 'comment';
-      cdiv.innerHTML = `
-        <span>${c.nick}: ${c.text}</span>
-        <div>
-          <button class="reply-btn">↩</button>
-          <button class="c-del">❌</button>
-        </div>
-      `;
-      commentList.appendChild(cdiv);
-
-      // ✅ 댓글 삭제
-      cdiv.querySelector('.c-del').addEventListener('click', async () => {
-        if (!confirm('이 댓글을 삭제하시겠습니까?')) return;
-        comments.splice(i, 1);
-        await saveData("postit", p.nickname, p.text, comments, p.report || 0);
-        setTimeout(async () => {
-          await loadAllData();
-          renderPostits();
-        }, 100);
-      });
-
-      // ✅ 대댓글
-      cdiv.querySelector('.reply-btn').addEventListener('click', async () => {
-        const replyText = prompt('답글을 입력하세요:');
-        if (!replyText) return;
-        const nick = $('#postNick').value.trim() || '익명';
-        const reply = { nick, text: `↳ ${replyText}` };
-        comments.splice(i + 1, 0, reply);
-        await saveData("postit", p.nickname, p.text, comments, p.report || 0);
-        setTimeout(async () => {
-          await loadAllData();
-          renderPostits();
-        }, 100);
-      });
-    });
-
-    // 댓글 작성
-    div.querySelector('.comment-add').addEventListener('click', async () => {
-      const val = div.querySelector('.comment-input').value.trim();
-      if (!val) return;
-      const anon = div.querySelector('.comment-anonymous').checked;
-      const nick = anon ? '익명' : ($('#postNick').value.trim() || '익명');
-      comments.push({ nick, text: val });
-      await saveData("postit", p.nickname, p.text, comments, p.report || 0);
-      setTimeout(async () => {
-        await loadAllData();
-        renderPostits();
-      }, 100);
-    });
-
-    // 신고 버튼
-    div.querySelector('.report').addEventListener('click', async () => {
-      const newReport = (parseInt(p.report || 0) + 1);
-      await saveData("postit", p.nickname, p.text, comments, newReport);
-      setTimeout(async () => {
-        await loadAllData();
-        renderPostits();
-      }, 100);
-    });
-
-    // 관리자 삭제 버튼
-    addAdminControls(div, p);
+    requestAnimationFrame(() => div.classList.add('fade-in'));
   });
 }
 
-// ✅ 관리자 삭제 기능
+// ✅ 게시글 생성 (독립 렌더링)
+function createPostitElement(p, idx) {
+  const div = document.createElement('div');
+  div.className = 'postit';
+  div.innerHTML = `
+    <div>${p.text}</div>
+    <div class="meta">
+      <span>${p.nickname}</span>
+      <span><button class="report">🚨${p.report || 0}</button></span>
+    </div>
+    <div class="comment-list"></div>
+    <input type="text" class="comment-input" placeholder="댓글 작성 (익명 가능)">
+    <label><input type="checkbox" class="comment-anonymous"> 익명</label>
+    <button class="comment-add">작성</button>
+  `;
+
+  const commentList = div.querySelector('.comment-list');
+  const comments = JSON.parse(p.comments || "[]");
+  renderComments(commentList, comments, p);
+
+  // 댓글 작성
+  div.querySelector('.comment-add').addEventListener('click', async () => {
+    const val = div.querySelector('.comment-input').value.trim();
+    if (!val) return;
+    const anon = div.querySelector('.comment-anonymous').checked;
+    const nick = anon ? '익명' : ($('#postNick').value.trim() || '익명');
+    const newComment = { nick, text: val };
+    comments.push(newComment);
+    await saveData("postit", p.nickname, p.text, comments, p.report || 0);
+    renderComments(commentList, comments, p, true); // 🔥 국소 업데이트
+    div.querySelector('.comment-input').value = '';
+  });
+
+  // 신고
+  div.querySelector('.report').addEventListener('click', async () => {
+    const newReport = (parseInt(p.report || 0) + 1);
+    await saveData("postit", p.nickname, p.text, comments, newReport);
+    p.report = newReport;
+    div.querySelector('.report').textContent = `🚨${newReport}`;
+  });
+
+  // 관리자 삭제
+  addAdminControls(div, p);
+
+  return div;
+}
+
+// ✅ 댓글 렌더링 (국소적)
+function renderComments(list, comments, p, smooth = false) {
+  list.replaceChildren();
+  comments.forEach((c, i) => {
+    const cdiv = document.createElement('div');
+    cdiv.className = 'comment';
+    cdiv.innerHTML = `
+      <span>${c.nick}: ${c.text}</span>
+      <div>
+        <button class="reply-btn">↩</button>
+        <button class="c-del">❌</button>
+      </div>
+    `;
+    if (smooth) requestAnimationFrame(() => cdiv.classList.add('fade-in'));
+    list.appendChild(cdiv);
+
+    // 댓글 삭제
+    cdiv.querySelector('.c-del').addEventListener('click', async () => {
+      comments.splice(i, 1);
+      await saveData("postit", p.nickname, p.text, comments, p.report || 0);
+      renderComments(list, comments, p, true);
+    });
+
+    // 대댓글
+    cdiv.querySelector('.reply-btn').addEventListener('click', async () => {
+      const replyText = prompt('답글을 입력하세요:');
+      if (!replyText) return;
+      const nick = $('#postNick').value.trim() || '익명';
+      const reply = { nick, text: `↳ ${replyText}` };
+      comments.splice(i + 1, 0, reply);
+      await saveData("postit", p.nickname, p.text, comments, p.report || 0);
+      renderComments(list, comments, p, true); // 🔥 부분 업데이트
+    });
+  });
+}
+
+// ✅ 관리자 삭제
 function addAdminControls(div, p) {
   if (masterKey && masterKey.length > 0) {
     const adminPanel = document.createElement('div');
