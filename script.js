@@ -57,22 +57,69 @@ async function saveData(category, nickname, text, comments = [], report = 0) {
 
 // === 기존 글 댓글만 업데이트 ===
 async function updatePostit(p, comments, newReport = null) {
+  const payload = {
+    action: newReport !== null ? "report" : "comment", // 신고/댓글 액션을 명확히 구분
+    timestamp: p.timestamp, // ⭐️ 가장 중요한 수정: Apps Script가 찾을 게시글 ID
+    masterKey: masterKey, // 혹시 모를 경우를 대비하여 마스터 키 포함
+    
+    // 댓글 업데이트 시 필요한 데이터
+    comments: comments, 
+    report: newReport !== null ? newReport : p.report || 0,
+  };
+    
+  if (payload.action === "comment") {
+      // 댓글 추가 로직에서는 이 함수를 쓰지 않고 아래 createPostitElement에서 직접 전송하도록 변경함
+      // 이 함수는 신고용으로만 사용하거나, 기존 댓글 배열을 통째로 덮어쓸 때만 사용합니다.
+  }
+
   try {
-    await fetch(API_URL, {
+    const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "comment",
-        nickname: p.nickname,
-        text: p.text,
-        comments: comments,
-        report: newReport !== null ? newReport : p.report || 0,
-      }),
+      body: JSON.stringify(payload),
     });
+    const result = await res.json();
+    if (result.error) {
+        console.error("API 응답 오류:", result.error);
+        alert(`처리 중 오류 발생: ${result.error}`);
+    }
   } catch (e) {
-    console.error("댓글 업데이트 오류:", e);
+    console.error("업데이트 오류:", e);
   }
 }
+
+
+// ⭐️⭐️ 새로운 댓글 추가 함수 (수정됨) ⭐️⭐️
+async function addCommentToPostit(p, nick, text) {
+    // Apps Script의 'comment' action 로직에 맞춰 payload를 구성합니다.
+    const payload = {
+        action: "comment",
+        timestamp: p.timestamp, // 게시글을 찾기 위한 필수 키
+        commentNick: nick,      // 댓글 작성자 이름 키
+        commentText: text,      // 댓글 내용 키
+    };
+    
+    try {
+        const res = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        const result = await res.json();
+        
+        if (result.error) {
+            console.error("댓글 추가 API 오류:", result.error);
+            alert(`댓글 추가 실패: ${result.error}`);
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.error("댓글 추가 오류:", e);
+        alert("네트워크 오류로 댓글 추가에 실패했습니다.");
+        return false;
+    }
+}
+
 
 // === 탭 전환 ===
 function setupTabs() {
@@ -127,6 +174,7 @@ function setupFormButtons() {
       const nick = $('#postAnonymous').checked ? '익명' : ($('#postNick').value.trim() || '익명');
       await saveData("postit", nick, text, []);
       $('#postText').value = '';
+      $('#postNick').value = '';
       await loadAllData();
       renderPostits();
     });
@@ -188,7 +236,8 @@ function createPostitElement(p) {
       <span><button class="report">🚨${p.report || 0}</button></span>
     </div>
     <div class="comment-list"></div>
-    <input type="text" class="comment-input" placeholder="댓글 작성 (익명 가능)">
+    <input type="text" class="comment-input" placeholder="댓글 작성 내용을 입력하세요">
+    <input type="text" class="comment-nick-input" placeholder="닉네임 (선택)"> 
     <label><input type="checkbox" class="comment-anonymous"> 익명</label>
     <button class="comment-add">작성</button>
   `;
@@ -200,21 +249,55 @@ function createPostitElement(p) {
   div.querySelector('.comment-add').addEventListener('click', async () => {
     const val = div.querySelector('.comment-input').value.trim();
     if (!val) return;
+    
+    // ⭐️ 수정된 닉네임 로직
     const anon = div.querySelector('.comment-anonymous').checked;
-    const nick = anon ? '익명' : ($('#postNick').value.trim() || '익명');
-    p.comments.push({ nick, text: val });
+    const nickInput = div.querySelector('.comment-nick-input').value.trim();
+    const nick = anon ? '익명' : (nickInput || '익명');
+    
+    // ⭐️ 기존에 로컬 배열에 추가 후 updatePostit을 호출하던 방식을 
+    //    Apps Script API를 직접 호출하도록 변경하여 정확도를 높였습니다.
+    const success = await addCommentToPostit(p, nick, val);
 
-    await updatePostit(p, p.comments);
-    renderComments(commentList, p.comments, p, true);
-    div.querySelector('.comment-input').value = '';
+    if (success) {
+      // 성공 시에만 데이터를 다시 불러와서 렌더링
+      div.querySelector('.comment-input').value = '';
+      div.querySelector('.comment-nick-input').value = ''; // 닉네임 필드 초기화
+      await loadAllData();
+      renderPostits();
+    }
   });
 
   // 신고
   div.querySelector('.report').addEventListener('click', async () => {
     const newReport = (parseInt(p.report || 0) + 1);
-    await updatePostit(p, p.comments, newReport);
-    p.report = newReport;
-    div.querySelector('.report').textContent = `🚨${newReport}`;
+    
+    // ⭐️ updatePostit을 신고용으로 명확하게 사용
+    const payload = {
+        action: "report",
+        timestamp: p.timestamp, // 필수 키
+        report: newReport,
+    };
+    
+    try {
+        const res = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+            p.report = newReport;
+            div.querySelector('.report').textContent = `🚨${newReport}`;
+            alert("신고가 접수되었습니다.");
+        } else {
+            alert(`신고 처리 실패: ${result.error}`);
+        }
+    } catch (e) {
+        alert("네트워크 오류로 신고 처리 실패했습니다.");
+    }
+
   });
 
   // 관리자 삭제
@@ -241,19 +324,56 @@ function renderComments(list, comments, p, smooth = false) {
 
     // 댓글 삭제
     cdiv.querySelector('.c-del').addEventListener('click', async () => {
-      comments.splice(i, 1);
-      await updatePostit(p, comments);
-      renderComments(list, comments, p, true);
+      const confirmDel = confirm("이 댓글을 삭제할까요?");
+      if (!confirmDel) return;
+        
+      // 로컬 댓글 배열에서 삭제
+      p.comments.splice(i, 1); 
+      
+      // ⭐️ 서버에 전체 댓글 배열을 덮어쓰도록 전송 (댓글 배열만 업데이트하는 전용 함수가 없으므로 임시로 updatePostit 사용)
+      const payload = {
+          action: "comment", // Apps Script에서 댓글 추가 로직이 작동하도록 임시로 comment 액션 사용
+          timestamp: p.timestamp, // 필수 키
+          comments: p.comments, // 전체 댓글 배열을 보냄
+      };
+
+      try {
+          const res = await fetch(API_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+          });
+          const result = await res.json();
+          
+          if (result.success) {
+              // 성공 시 로컬 렌더링 업데이트
+              renderComments(list, p.comments, p, true);
+          } else {
+              alert(`댓글 삭제 처리 실패: ${result.error}`);
+              // 실패 시 데이터 롤백 (선택 사항)
+          }
+      } catch (e) {
+          alert("네트워크 오류로 댓글 삭제 실패했습니다.");
+      }
     });
 
     // 대댓글
     cdiv.querySelector('.reply-btn').addEventListener('click', async () => {
-      const replyText = prompt('답글을 입력하세요:');
+      const replyText = prompt('답글 내용을 입력하세요:');
       if (!replyText) return;
-      const nick = $('#postNick').value.trim() || '익명';
-      comments.splice(i + 1, 0, { nick, text: `↳ ${replyText}` });
-      await updatePostit(p, comments);
-      renderComments(list, comments, p, true);
+      
+      const replyNick = prompt('답글 닉네임을 입력하세요 (미입력 시 익명):');
+      const nick = replyNick && replyNick.trim() ? replyNick.trim() : '익명';
+      
+      const replyIndex = i + 1;
+      
+      const success = await addCommentToPostit(p, nick, `↳ ${replyText}`);
+
+      if (success) {
+          // 성공 시 전체 데이터 다시 불러와서 렌더링
+          await loadAllData();
+          renderPostits();
+      }
     });
   });
 }
@@ -269,19 +389,23 @@ function addAdminControls(div, p) {
     adminPanel.querySelector(".admin-del").addEventListener("click", async () => {
       const confirmDel = confirm(`"${p.text}" 글을 정말 삭제할까요?`);
       if (!confirmDel) return;
-      await fetch(API_URL, {
+      const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "delete",
           masterKey: masterKey,
-          nickname: p.nickname,
-          text: p.text
+          timestamp: p.timestamp // ⭐️ Timestamp 추가
         })
       });
-      alert("삭제 완료!");
-      await loadAllData();
-      renderPostits();
+      const result = await res.json();
+      if (result.success) {
+          alert("삭제 완료!");
+          await loadAllData();
+          renderPostits();
+      } else {
+          alert(`삭제 실패: ${result.error}`);
+      }
     });
   }
 }
