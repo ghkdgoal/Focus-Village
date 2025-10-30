@@ -13,7 +13,7 @@ let routines = [];
 let postits = [];
 
 // 관리용 키 (브라우저에서 한번만 물음)
-const masterKey = prompt("환영합니다! Focus Village 관리자 키가 있으면 입력하세요(없으면 Enter).");
+const masterKey = prompt("환영합니다! 집중 루틴 커뮤니티에 오신 걸 환영합니다. (Enter 혹은 확인을 눌러주세요.)");
 
 // 초기화
 window.addEventListener("DOMContentLoaded", async () => {
@@ -439,3 +439,4 @@ window._fv = {
   data: () => ({ routines, postits }),
   api: API_URL
 };
+
