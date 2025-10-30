@@ -1,7 +1,7 @@
 /*************************************************************
- * Focus Village - script.js (완전판)
- * - 최신순 정렬, 댓글/대댓글/삭제/신고/관리자 기능 완전 지원
- * - Apps Script (timestamp 기반) + Cloudflare Worker 연동 전제
+ * Focus Village - script.js (소유권 확인 완전판)
+ * - localStorage 기반 익명 authorId 사용
+ * - 자기가 쓴 글/댓글만 삭제 버튼 노출
  *************************************************************/
 
 const API_URL = "https://withered-poetry-718c.ini123567.workers.dev"; // 네 Worker/AppsScript 프록시 URL
@@ -11,13 +11,27 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
 
 let routines = [];
 let postits = [];
+let currentUserId = ''; // ⭐️ 현재 사용자 ID 변수
 
 // 관리용 키 (브라우저에서 한번만 물음)
 const masterKey = prompt("환영합니다! 집중 루틴 커뮤니티에 오신 걸 환영합니다. (Enter 혹은 확인을 눌러주세요.)");
 
+// ⭐️ 사용자 ID 가져오기 (없으면 생성)
+function getOrCreateUserId() {
+  let userId = localStorage.getItem('focusVillageUserID');
+  if (!userId) {
+    userId = crypto.randomUUID();
+    localStorage.setItem('focusVillageUserID', userId);
+  }
+  return userId;
+}
+
 // 초기화
 window.addEventListener("DOMContentLoaded", async () => {
   console.log("Focus Village init...");
+  currentUserId = getOrCreateUserId(); // ⭐️ ID 로드
+  console.log("Current User ID:", currentUserId);
+
   await loadAllData();
   renderOthersRoutine();
   renderPostits();
@@ -26,7 +40,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 
 /*************************************************************
- * loadAllData - GET
+ * loadAllData - GET (변경 없음)
  *************************************************************/
 async function loadAllData() {
   try {
@@ -66,10 +80,12 @@ async function loadAllData() {
 
 /*************************************************************
  * saveData - 새 글(루틴/포스트잇) 저장
+ * ⭐️ authorId 인자 추가
  *************************************************************/
-async function saveData(category, nickname, text, comments = [], report = 0) {
+async function saveData(category, nickname, text, comments = [], report = 0, authorId) {
   try {
-    const payload = { category, nickname, text, comments, report };
+    // ⭐️ authorId 페이로드에 포함
+    const payload = { category, nickname, text, comments, report, authorId };
     const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -91,14 +107,16 @@ async function saveData(category, nickname, text, comments = [], report = 0) {
 
 /*************************************************************
  * addCommentToPostit - 서버에 댓글 추가 (action: comment)
+ * ⭐️ authorId 인자 추가
  *************************************************************/
-async function addCommentToPostit(post, nick, text) {
+async function addCommentToPostit(post, nick, text, authorId) {
   try {
     const payload = {
       action: "comment",
       timestamp: post.timestamp,
       commentNick: nick || "익명",
       commentText: text,
+      authorId: authorId // ⭐️ authorId 페이로드에 포함
     };
     const res = await fetch(API_URL, {
       method: "POST",
@@ -120,8 +138,8 @@ async function addCommentToPostit(post, nick, text) {
 }
 
 /*************************************************************
- * updatePostitFull - 전체 댓글 덮어쓰기 or 신고 (action: report or comment with comments)
- * - 사용처: 댓글 삭제(전체 덮어쓰기), 신고 처리
+ * updatePostitFull - API 호출 범용 (삭제/신고 등)
+ * (변경 없음 - 범용 fetch 래퍼로 사용)
  *************************************************************/
 async function updatePostitFull(payload) {
   try {
@@ -142,7 +160,7 @@ async function updatePostitFull(payload) {
 }
 
 /*************************************************************
- * UI: 탭 설정
+ * UI: 탭 설정 (변경 없음)
  *************************************************************/
 function setupTabs() {
   $$('.cat-btn').forEach(btn => {
@@ -160,6 +178,7 @@ function setupTabs() {
 
 /*************************************************************
  * UI: 폼 버튼 이벤트 바인딩
+ * ⭐️ saveData 호출 시 currentUserId 전달
  *************************************************************/
 function setupFormButtons() {
   const myForm = $('#myRoutineForm');
@@ -173,7 +192,8 @@ function setupFormButtons() {
         q4: e.target.q4.value,
         q5: e.target.q5.value,
       };
-      const result = await saveData("routine", "익명", JSON.stringify(data, null, 2));
+      // ⭐️ currentUserId 전달
+      const result = await saveData("routine", "익명", JSON.stringify(data, null, 2), [], 0, currentUserId);
       if (result.ok) {
         alert('루틴이 제출되었습니다!');
         e.target.reset();
@@ -201,7 +221,8 @@ function setupFormButtons() {
       if (!text) return alert('내용을 입력해주세요.');
       const nick = anonEl.checked ? '익명' : (nickEl.value.trim() || '익명');
 
-      const res = await saveData("postit", nick, text, []);
+      // ⭐️ currentUserId 전달
+      const res = await saveData("postit", nick, text, [], 0, currentUserId);
       if (res.ok) {
         textEl.value = '';
         nickEl.value = '';
@@ -215,7 +236,7 @@ function setupFormButtons() {
 }
 
 /*************************************************************
- * renderOthersRoutine - 다른 사람 루틴 표시 (최신 위)
+ * renderOthersRoutine - 다른 사람 루틴 표시 (변경 없음)
  *************************************************************/
 function renderOthersRoutine() {
   const board = $('#othersRoutineBoard');
@@ -243,7 +264,7 @@ function renderOthersRoutine() {
 }
 
 /*************************************************************
- * renderPostits - 커뮤니티 게시판 렌더링
+ * renderPostits - 커뮤니티 게시판 렌더링 (변경 없음)
  *************************************************************/
 function renderPostits() {
   const board = $('#postBoard');
@@ -264,6 +285,7 @@ function renderPostits() {
 
 /*************************************************************
  * createPostitElement - 단일 포스트 카드 생성
+ * ⭐️ '내 글 삭제' 버튼 추가 및 로직 변경
  *************************************************************/
 function createPostitElement(p) {
   const div = document.createElement('div');
@@ -276,7 +298,11 @@ function createPostitElement(p) {
     <div class="post-text">${escapeHtml(safeText(p.text))}</div>
     <div class="meta">
       <span class="nick">${escapeHtml(safeText(p.nickname))}</span>
-      <span><button class="report">🚨${p.report || 0}</button></span>
+      <span>
+        <!-- ⭐️ '내 글 삭제' 버튼 (평소엔 숨김) -->
+        <button class="user-del" title="내 글 삭제" style="display:none; margin-right: 8px;">❌</button>
+        <button class="report" title="신고">🚨${p.report || 0}</button>
+      </span>
     </div>
     <div class="comment-list"></div>
 
@@ -303,8 +329,8 @@ function createPostitElement(p) {
     if (!text) return alert('댓글 내용을 입력하세요.');
     const nick = anon ? '익명' : (nickInput.value.trim() || '익명');
 
-    // 서버에 댓글 추가
-    const added = await addCommentToPostit(p, nick, text);
+    // ⭐️ 서버에 댓글 추가시 currentUserId 전달
+    const added = await addCommentToPostit(p, nick, text, currentUserId);
     if (added.ok) {
       // 새로 불러와서 렌더 동기화
       await loadAllData();
@@ -335,15 +361,39 @@ function createPostitElement(p) {
     }
   });
 
-  // 관리자 삭제 버튼 (로컬에 masterKey가 있으면 노출)
+  // ⭐️ '내 글 삭제' 버튼 노출 및 이벤트
+  if (p.authorId === currentUserId) {
+    const userDeleteBtn = div.querySelector('.user-del');
+    userDeleteBtn.style.display = 'inline-block'; // 버튼 보이기
+    userDeleteBtn.addEventListener('click', async () => {
+      const ok = confirm('이 게시글을 삭제하시겠습니까?');
+      if (!ok) return;
+      const payload = { 
+        action: "deleteByUser", // ⭐️ 사용자 삭제 액션
+        timestamp: p.timestamp, 
+        authorId: currentUserId // ⭐️ 서버에서 2차 검증
+      };
+      const res = await updatePostitFull(payload);
+      if (res.ok) {
+        alert('삭제 완료');
+        await loadAllData();
+        renderPostits();
+      } else {
+        alert(`삭제 실패: ${res.error || '서버 오류'}`);
+      }
+    });
+  }
+
+  // ⭐️ 관리자 삭제 버튼 (masterKey 소유자만)
   if (masterKey && masterKey.length > 0) {
     const adminPanel = document.createElement('div');
     adminPanel.style.marginTop = '8px';
-    adminPanel.innerHTML = `<button class="btn ghost admin-del">관리자 삭제</button>`;
+    adminPanel.innerHTML = `<button class="btn ghost admin-del">관리자 삭제 (Admin)</button>`;
     div.appendChild(adminPanel);
     adminPanel.querySelector('.admin-del').addEventListener('click', async () => {
       const ok = confirm('관리자 권한으로 이 게시글을 삭제하시겠습니까?');
       if (!ok) return;
+      // ⭐️ action: "delete" (관리자 전용)
       const payload = { action: "delete", masterKey, timestamp: p.timestamp };
       const res = await updatePostitFull(payload);
       if (res.ok) {
@@ -361,6 +411,7 @@ function createPostitElement(p) {
 
 /*************************************************************
  * renderComments - 댓글/대댓글 렌더링 & 로컬 삭제/대댓글 UI 연결
+ * ⭐️ '내 댓글 삭제' 로직 변경
  *************************************************************/
 function renderComments(container, comments = [], post) {
   container.replaceChildren();
@@ -376,36 +427,47 @@ function renderComments(container, comments = [], post) {
         <div class="small" style="margin-top:6px;color:var(--muted)">${escapeHtml(c.date || '')}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-left:8px">
-        <button class="reply-btn">↩</button>
-        <button class="c-del">❌</button>
+        <button class="reply-btn" title="답글">↩</button>
+        <!-- ⭐️ '내 댓글 삭제' 버튼 (평소엔 숨김) -->
+        <button class="c-del" title="내 댓글 삭제" style="display:none;">❌</button>
       </div>
     `;
 
-    // 삭제 (로컬 배열 수정 후 서버에 전체 덮어쓰기)
-    cdiv.querySelector('.c-del').addEventListener('click', async () => {
-      const conf = confirm('이 댓글을 삭제할까요?');
-      if (!conf) return;
-      // remove from local array
-      comments.splice(idx, 1);
-      // send full comments array to server to overwrite
-      const payload = { action: "comment", timestamp: post.timestamp, comments: comments };
-      const res = await updatePostitFull(payload);
-      if (res.ok) {
-        // update UI
-        await loadAllData();
-        renderPostits();
-      } else {
-        alert(`삭제 실패: ${res.error || '서버 오류'}`);
-      }
-    });
+    const deleteBtn = cdiv.querySelector('.c-del');
+
+    // ⭐️ '내 댓글 삭제' 버튼 노출 및 이벤트
+    if (c.authorId === currentUserId) {
+      deleteBtn.style.display = 'block'; // 버튼 보이기
+      deleteBtn.addEventListener('click', async () => {
+        const conf = confirm('이 댓글을 삭제할까요?');
+        if (!conf) return;
+        
+        // ⭐️ 'action: "deleteComment"' API 호출 (서버에서 소유권 확인)
+        const payload = { 
+          action: "deleteComment", 
+          timestamp: post.timestamp, 
+          commentIndex: idx, // ⭐️ 몇 번째 댓글인지
+          authorId: currentUserId // ⭐️ 내가 누구인지
+        };
+        const res = await updatePostitFull(payload);
+        if (res.ok) {
+          // UI 업데이트
+          await loadAllData();
+          renderPostits();
+        } else {
+          alert(`삭제 실패: ${res.error || '서버 오류'}`);
+        }
+      });
+    }
 
     // 대댓글 (insert after current index)
     cdiv.querySelector('.reply-btn').addEventListener('click', async () => {
       const replyText = prompt('답글을 입력하세요:');
       if (!replyText) return;
       const replyNick = prompt('닉네임을 입력하세요 (미입력 시 익명):') || '익명';
-      // Use server comment add endpoint for atomicity
-      const added = await addCommentToPostit(post, replyNick, `↳ ${replyText}`);
+      
+      // ⭐️ 대댓글도 authorId 전달
+      const added = await addCommentToPostit(post, replyNick, `↳ ${replyText}`, currentUserId);
       if (added.ok) {
         await loadAllData();
         renderPostits();
@@ -436,7 +498,7 @@ function escapeHtml(str) {
  *************************************************************/
 window._fv = {
   reload: async () => { await loadAllData(); renderOthersRoutine(); renderPostits(); console.log('reloaded'); },
-  data: () => ({ routines, postits }),
+  data: () => ({ routines, postits, currentUserId }), // ⭐️ currentUserId 확인용 추가
   api: API_URL
 };
 
