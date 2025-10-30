@@ -1,5 +1,6 @@
 /*************************************************************
  * Focus Village - script.js (소유권 확인 완전판)
+ * - ⭐️ "다른 사람" 탭에 통계 보드 기능 추가
  * - localStorage 기반 익명 authorId 사용
  * - 자기가 쓴 글/댓글만 삭제 버튼 노출
  *************************************************************/
@@ -33,7 +34,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   console.log("Current User ID:", currentUserId);
 
   await loadAllData();
-  renderOthersRoutine();
+  renderOthersRoutine(); // ⭐️ 통계 기능이 추가된 함수 호출
   renderPostits();
   setupTabs();
   setupFormButtons();
@@ -80,7 +81,7 @@ async function loadAllData() {
 
 /*************************************************************
  * saveData - 새 글(루틴/포스트잇) 저장
- * ⭐️ authorId 인자 추가
+ * ⭐️ authorId 인자 추가 (변경 없음)
  *************************************************************/
 async function saveData(category, nickname, text, comments = [], report = 0, authorId) {
   try {
@@ -107,7 +108,7 @@ async function saveData(category, nickname, text, comments = [], report = 0, aut
 
 /*************************************************************
  * addCommentToPostit - 서버에 댓글 추가 (action: comment)
- * ⭐️ authorId 인자 추가
+ * ⭐️ authorId 인자 추가 (변경 없음)
  *************************************************************/
 async function addCommentToPostit(post, nick, text, authorId) {
   try {
@@ -178,7 +179,7 @@ function setupTabs() {
 
 /*************************************************************
  * UI: 폼 버튼 이벤트 바인딩
- * ⭐️ saveData 호출 시 currentUserId 전달
+ * ⭐️ saveData 호출 시 currentUserId 전달 (변경 없음)
  *************************************************************/
 function setupFormButtons() {
   const myForm = $('#myRoutineForm');
@@ -198,7 +199,7 @@ function setupFormButtons() {
         alert('루틴이 제출되었습니다!');
         e.target.reset();
         await loadAllData();
-        renderOthersRoutine();
+        renderOthersRoutine(); // ⭐️ 통계가 포함된 함수 재호출
       } else {
         alert(`제출 실패: ${result.error || '알 수 없음'}`);
       }
@@ -236,32 +237,116 @@ function setupFormButtons() {
 }
 
 /*************************************************************
- * renderOthersRoutine - 다른 사람 루틴 표시 (변경 없음)
+ * ⭐️ (대폭 수정) renderOthersRoutine - 통계 보드 + 루틴 목록 표시
  *************************************************************/
 function renderOthersRoutine() {
   const board = $('#othersRoutineBoard');
-  if (!board) return;
+  const statsBoard = $('#routineStatsBoard'); // ⭐️ 1. 통계 보드 DOM 선택
+  if (!board || !statsBoard) return;
+
   board.innerHTML = '';
+  statsBoard.innerHTML = ''; // ⭐️ 2. 통계 보드 비우기
+
   if (!routines.length) {
     board.innerHTML = '<div class="small">아직 다른 사람들의 루틴이 없습니다.</div>';
+    statsBoard.innerHTML = '<div class="small">통계 데이터가 없습니다.</div>';
     return;
   }
+
+  // --- ⭐️ 3. 통계 계산 로직 시작 ---
+  const q1Counts = {};
+  let q3Total = 0;
+  let q3ValidCount = 0;
+  const totalRoutines = routines.length;
+
+  routines.forEach(r => {
+    let parsed = {};
+    try {
+      parsed = JSON.parse(r.text);
+    } catch (e) {
+      return; // 파싱 실패 시 이 루틴은 건너뜀
+    }
+
+    // Q1: 집중도
+    const q1Answer = parsed.q1;
+    if (q1Answer) {
+      q1Counts[q1Answer] = (q1Counts[q1Answer] || 0) + 1;
+    }
+
+    // Q3: 최대 집중 시간
+    const q3Answer = parseInt(parsed.q3, 10);
+    if (!isNaN(q3Answer) && q3Answer > 0) {
+      q3Total += q3Answer;
+      q3ValidCount++;
+    }
+  });
+
+  // Q3: 평균 계산
+  const q3Average = q3ValidCount > 0 ? (q3Total / q3ValidCount).toFixed(1) : '데이터 없음';
+
+  // Q1: 백분율 계산 및 정렬 (답변 순서대로 정렬)
+  const q1Order = ["매우 그렇다", "그렇다", "보통", "그렇지 않다", "전혀 아니다"];
+  const q1Sorted = [];
+  for (const answer of q1Order) {
+      if (q1Counts[answer]) {
+          q1Sorted.push({
+              answer,
+              count: q1Counts[answer],
+              percentage: ((q1Counts[answer] / totalRoutines) * 100).toFixed(1)
+          });
+      }
+  }
+
+  // --- 4. 통계 HTML 생성 ---
+  let statsHtml = `
+    <h3>📊 집중 통계 (총 ${totalRoutines}개)</h3>
+    <div class="stats-item">
+      <span>평균 최대 집중 시간 (Q3):</span>
+      <strong>${q3Average} 분</strong>
+    </div>
+    <div class="stats-item">
+      <span>집중도 (Q1):</span>
+      <span></span>
+    </div>
+  `;
+
+  if (q1Sorted.length > 0) {
+    q1Sorted.forEach(item => {
+      statsHtml += `
+        <div class="stats-q1-item">
+          - ${item.answer}: <strong>${item.count}명</strong> (${item.percentage}%)
+        </div>
+      `;
+    });
+  } else {
+    statsHtml += `<div class="stats-q1-item">- 데이터 없음</div>`;
+  }
+
+  statsBoard.innerHTML = statsHtml; // ⭐️ 5. 통계 보드에 HTML 삽입
+  // --- 통계 로직 종료 ---
+
+
+  // --- 6. 개별 루틴 렌더링 (기존 로직) ---
   routines.forEach(r => {
     let parsed = {};
     try { parsed = JSON.parse(r.text); } catch { parsed = {}; }
     const div = document.createElement('div');
     div.className = 'postit fade-in';
+    // ⭐️ 개별 항목 가독성 개선
     div.innerHTML = `
-      <div>Q1: ${parsed.q1 || ''}</div>
-      <div>Q2: ${parsed.q2 || ''}</div>
-      <div>Q3: ${parsed.q3 || ''}</div>
-      <div>Q4: ${parsed.q4 || ''}</div>
-      <div>Q5: ${parsed.q5 || ''}</div>
-      <div class="meta small">${r.timestamp ? new Date(Number(r.timestamp)).toLocaleString("ko-KR") : ''}</div>
+      <div class="small" style="margin-bottom: 8px; border-bottom: 1px dashed #eee; padding-bottom: 8px;">
+        <strong>Q1 (집중도):</strong> ${parsed.q1 || 'N/A'}<br>
+        <strong>Q3 (최대 시간):</strong> ${parsed.q3 ? parsed.q3 + '분' : 'N/A'}
+      </div>
+      <div><strong>Q2 (루틴):</strong> ${escapeHtml(parsed.q2) || ''}</div>
+      <div><strong>Q4 (나만의 방법):</strong> ${escapeHtml(parsed.q4) || ''}</div>
+      <div><strong>Q5 (안되는 이유):</strong> ${escapeHtml(parsed.q5) || ''}</div>
+      <div class="meta small" style="margin-top: 10px;">${r.timestamp ? new Date(Number(r.timestamp)).toLocaleString("ko-KR") : ''}</div>
     `;
     board.appendChild(div);
   });
 }
+
 
 /*************************************************************
  * renderPostits - 커뮤니티 게시판 렌더링 (변경 없음)
@@ -285,7 +370,7 @@ function renderPostits() {
 
 /*************************************************************
  * createPostitElement - 단일 포스트 카드 생성
- * ⭐️ '내 글 삭제' 버튼 추가 및 로직 변경
+ * ⭐️ '내 글 삭제' 버튼 추가 및 로직 변경 (변경 없음)
  *************************************************************/
 function createPostitElement(p) {
   const div = document.createElement('div');
@@ -411,7 +496,7 @@ function createPostitElement(p) {
 
 /*************************************************************
  * renderComments - 댓글/대댓글 렌더링 & 로컬 삭제/대댓글 UI 연결
- * ⭐️ '내 댓글 삭제' 로직 변경
+ * ⭐️ '내 댓글 삭제' 로직 변경 (변경 없음)
  *************************************************************/
 function renderComments(container, comments = [], post) {
   container.replaceChildren();
